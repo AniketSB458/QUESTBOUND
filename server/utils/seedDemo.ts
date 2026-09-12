@@ -62,7 +62,7 @@ export const seedDemo = async () => {
       { title: 'Morning Cyber-Jog (5km)', category: 'Fitness', difficulty: 'Medium' },
       { title: 'Read "Do Androids Dream of Electric Sheep?"', category: 'Reading', difficulty: 'Hard' },
       { title: '15 Min Void Meditation', category: 'Personal', difficulty: 'Easy' },
-    ];
+    ] as const;
 
     for (const q of activeQuests) {
       const rewards = calculateQuestRewards(q.difficulty);
@@ -80,7 +80,7 @@ export const seedDemo = async () => {
     const completedQuests = [
       { title: 'Optimize Database Queries', category: 'Coding', difficulty: 'Hard' },
       { title: 'Meal Prep for the week', category: 'Health', difficulty: 'Medium' },
-    ];
+    ] as const;
 
     for (let i = 0; i < completedQuests.length; i++) {
       const q = completedQuests[i];
@@ -99,20 +99,22 @@ export const seedDemo = async () => {
         createdAt: date
       });
 
-      await Activity.create({
-        userId: demoUser._id,
-        questId: quest._id,
-        action: 'QUEST_COMPLETED',
-        xpEarned: rewards.xp,
-        creditsEarned: rewards.credits,
-        attribute: mapCategoryToAttribute(q.category),
-        attributeIncrease: rewards.attribute,
-        date: date,
-        details: {
-          questTitle: quest.title,
-          levelUp: false
-        }
-      });
+      if (quest) {
+        await Activity.create({
+          userId: demoUser._id,
+          questId: quest._id,
+          action: 'QUEST_COMPLETED',
+          xpEarned: rewards.xp,
+          creditsEarned: rewards.credits,
+          attribute: mapCategoryToAttribute(q.category),
+          attributeIncrease: rewards.attribute,
+          date: date,
+          details: {
+            questTitle: quest.title,
+            levelUp: false
+          }
+        });
+      }
     }
 
     console.log('Demo user seeded successfully.');

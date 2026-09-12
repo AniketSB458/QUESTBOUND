@@ -13,10 +13,11 @@ export const connectDB = async () => {
       mongoUri = mongoServer.getUri();
     }
 
+    mongoose.set('bufferCommands', false); // CRITICAL: fail fast, don't hang
     await mongoose.connect(mongoUri);
     console.log(`MongoDB Connected: ${mongoose.connection.host}`);
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error instanceof Error ? error.message : error}`);
-    process.exit(1);
+    console.warn('[AI Studio] Database offline or could not connect — mock fallback will handle requests');
   }
 };

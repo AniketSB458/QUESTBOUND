@@ -64,7 +64,6 @@ const seedData = async () => {
     console.log('Shop items seeded successfully.');
   } catch (error) {
     console.error('Error seeding data:', error);
-    throw error;
   }
 };
 
