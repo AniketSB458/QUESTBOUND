@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import MagicOrb from '../components/MagicOrb';
+import ThreeDCharacterDisplay from '../components/character/ThreeDCharacterDisplay';
 import api from '../services/api';
 import { getCharacterDetails } from '../utils/character';
 
@@ -36,6 +37,24 @@ const AttributeBar = ({ label, value, icon: Icon, colorClass }: { label: string,
 export default function Dashboard() {
   const { user } = useAuth();
   const [activeQuests, setActiveQuests] = useState([]);
+  const [animEvent, setAnimEvent] = useState<'idle' | 'level_up' | 'quest_complete'>('idle');
+  const [prevLevel, setPrevLevel] = useState(user?.level || 1);
+  const [prevXp, setPrevXp] = useState(user?.xp || 0);
+
+  useEffect(() => {
+    if (user) {
+      if (user.level > prevLevel) {
+        setAnimEvent('level_up');
+        setTimeout(() => setAnimEvent('idle'), 3000);
+        setPrevLevel(user.level);
+        setPrevXp(user.xp);
+      } else if (user.xp > prevXp) {
+        setAnimEvent('quest_complete');
+        setTimeout(() => setAnimEvent('idle'), 1500);
+        setPrevXp(user.xp);
+      }
+    }
+  }, [user]);
   
   useEffect(() => {
     const fetchRecentQuests = async () => {
@@ -70,9 +89,11 @@ export default function Dashboard() {
            </div>
            
            <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
-             <div className="w-32 h-32 md:w-40 md:h-40 bg-slate-950/40 border border-amber-500/30 rounded-2xl shadow-[0_0_20px_rgba(251,191,36,0.15)] relative z-20 shrink-0 overflow-hidden flex items-center justify-center">
+             <div className="w-32 h-48 md:w-48 md:h-64 bg-slate-950/40 border border-amber-500/30 rounded-2xl shadow-[0_0_20px_rgba(251,191,36,0.15)] relative z-20 shrink-0 overflow-hidden flex items-center justify-center">
                {user.characterClass && user.characterClass !== 'Unassigned' ? (
-                 <img src={characterDetails.avatarUrl} alt={characterDetails.title} className="w-full h-full object-cover opacity-90 scale-125" />
+                 <div className="absolute inset-0 z-10">
+                 <ThreeDCharacterDisplay characterClass={user.characterClass || 'Swordsman'} element={user.element || 'ARCANE'} level={user.level || 1} interactive={false} animationEvent={animEvent} />
+               </div>
                ) : (
                  <MagicOrb />
                )}

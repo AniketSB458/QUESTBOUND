@@ -21,3 +21,17 @@ api.interceptors.request.use(
 );
 
 export default api;
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status !== 401 && error.response?.status !== 404) {
+      console.error('API Error:', error.response?.status, error.response?.data, error.config?.url);
+    }
+    if (error.response && (error.response.status === 401 || (error.response.status === 404 ))) {
+      localStorage.removeItem('nexus_user');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);

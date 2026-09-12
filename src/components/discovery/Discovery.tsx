@@ -7,12 +7,14 @@ import { DISCOVERY_QUESTIONS } from '../../data/discoveryQuestions';
 import { calculateCharacterProfile, Traits } from '../../services/characterDiscovery';
 import { EASING, SPRING } from '../../utils/motion';
 import { cn } from '../../utils/cn';
+import ThreeDCharacterDisplay from './3DCharacterDisplay';
 
 export default function Discovery() {
   const { user, updateUser } = useAuth();
   
   const [phase, setPhase] = useState<'INTRO' | 'QUESTIONS' | 'AWAKENING' | 'REVEAL'>('INTRO');
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [traits, setTraits] = useState<Traits>({
     intellect: 0, courage: 0, discipline: 0, creativity: 0, empathy: 0, energy: 0
   });
@@ -40,7 +42,10 @@ export default function Discovery() {
     }));
 
     if (currentQuestion < DISCOVERY_QUESTIONS.length - 1) {
-      setTimeout(() => setCurrentQuestion(prev => prev + 1), 600);
+      setTimeout(() => {
+        setCurrentQuestion(prev => prev + 1);
+        setIsTransitioning(false);
+      }, 600);
     } else {
       setTimeout(() => {
         const finalTraits = {
@@ -99,7 +104,9 @@ export default function Discovery() {
       });
       updateUser(data);
     } catch (err) {
-      console.error("Error finalizing discovery", err);
+      if (err.response?.status !== 401 && err.response?.status !== 404) {
+        console.error("Error finalizing discovery", err);
+      }
     }
   };
 
@@ -110,6 +117,25 @@ export default function Discovery() {
       {/* Background Particles/Fog (Simplified for performance) */}
       <div className="absolute inset-0 opacity-40 mix-blend-screen pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(251,191,36,0.15)_0%,rgba(0,0,0,0)_70%)]" />
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 animate-pulse pointer-events-none" />
+
+      {/* 3D Background */}
+      <AnimatePresence>
+        {(phase === 'AWAKENING' || phase === 'REVEAL') && profile && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 3 }}
+            className="absolute inset-0 z-0 pointer-events-auto"
+          >
+            <ThreeDCharacterDisplay 
+              characterClass={profile.characterClass} 
+              element={profile.element} 
+              level={1} 
+              interactive={phase === 'REVEAL'} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         
@@ -167,11 +193,11 @@ export default function Discovery() {
                 className="text-center"
               >
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-10 h-20 flex items-center justify-center">
-                  {DISCOVERY_QUESTIONS[currentQuestion].question}
+                  {DISCOVERY_QUESTIONS[currentQuestion]?.question}
                 </h2>
                 
                 <div className="space-y-4">
-                  {DISCOVERY_QUESTIONS[currentQuestion].options.map((opt) => (
+                  {DISCOVERY_QUESTIONS[currentQuestion]?.options?.map((opt) => (
                     <motion.button
                       key={opt.id}
                       onClick={() => handleOptionSelect(opt.traits)}
@@ -218,9 +244,9 @@ export default function Discovery() {
             key="reveal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="w-full max-w-lg px-4 relative z-10"
+            className="w-full max-w-md px-4 relative z-10 md:absolute md:left-12 md:top-1/2 md:-translate-y-1/2"
           >
-            <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center text-center relative overflow-hidden">
+            <div className="bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-2xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center text-center relative overflow-hidden">
               
               {/* Backlight matching element approx */}
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 to-transparent pointer-events-none" />
