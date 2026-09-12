@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { protect, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { calculateCharacterProfile } from '../utils/characterProfile';
 
 const router = express.Router();
 
@@ -16,6 +17,15 @@ const registerSchema = credentialsSchema.extend({
   name: z.string().trim().min(2).max(50),
   timezone: z.string().trim().min(1).max(64).default('UTC'),
 });
+
+const traitsSchema = z.object({
+  intellect: z.number().int().min(0).max(15),
+  courage: z.number().int().min(0).max(15),
+  discipline: z.number().int().min(0).max(15),
+  creativity: z.number().int().min(0).max(15),
+  empathy: z.number().int().min(0).max(15),
+  energy: z.number().int().min(0).max(15),
+}).refine((traits) => Object.values(traits).reduce((sum, value) => sum + value, 0) === 25, 'Quiz traits must total 25 points');
 
 const generateToken = (id: string) => {
   const secret = process.env.JWT_SECRET;
@@ -112,50 +122,26 @@ router.post('/login', async (req, res) => {
 // @route   POST /api/auth/quiz
 router.post('/quiz', protect, async (req: AuthRequest, res) => {
   try {
-    if (!req.user) {
-       return res.status(401).json({ message: 'Not authorized' });
+    const parsed = traitsSchema.safeParse(req.body?.traits);
+    if (!parsed.success) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid quiz result', fields: parsed.error.flatten().fieldErrors } });
+    const profile = calculateCharacterProfile(parsed.data);
+    const attributes = Object.fromEntries(Object.entries(profile.baseAttributes).map(([key, value]) => [`attributes.${key}`, value]));
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: req.user!.id, quizCompleted: false },
+      {
+        $set: { characterClass: profile.characterClass, identity: profile.identity, element: profile.element, companion: profile.companion, specialAbility: profile.specialAbility, quizCompleted: true, discoveryVersion: 2 },
+        $max: attributes,
+        $inc: { xp: 250, credits: 100 },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!updatedUser) {
+      const exists = await User.exists({ _id: req.user!.id });
+      return res.status(exists ? 409 : 404).json({ error: { code: exists ? 'QUIZ_ALREADY_COMPLETED' : 'USER_NOT_FOUND', message: exists ? 'Character discovery is already complete' : 'User not found' } });
     }
-    const { 
-      characterClass, 
-      identity, 
-      element, 
-      companion, 
-      specialAbility, 
-      baseAttributes, 
-      rewards 
-    } = req.body;
-    
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    user.characterClass = characterClass || user.characterClass;
-    user.identity = identity || user.identity;
-    user.element = element || user.element;
-    user.companion = companion || user.companion;
-    user.specialAbility = specialAbility || user.specialAbility;
-    user.quizCompleted = true;
-
-    if (baseAttributes) {
-      if (typeof baseAttributes.strength === 'number') user.attributes.strength = Math.max(user.attributes.strength || 1, baseAttributes.strength);
-      if (typeof baseAttributes.intellect === 'number') user.attributes.intellect = Math.max(user.attributes.intellect || 1, baseAttributes.intellect);
-      if (typeof baseAttributes.discipline === 'number') user.attributes.discipline = Math.max(user.attributes.discipline || 1, baseAttributes.discipline);
-      if (typeof baseAttributes.creativity === 'number') user.attributes.creativity = Math.max(user.attributes.creativity || 1, baseAttributes.creativity);
-      if (typeof baseAttributes.energy === 'number') user.attributes.energy = Math.max(user.attributes.energy || 1, baseAttributes.energy);
-      if (typeof baseAttributes.empathy === 'number') user.attributes.empathy = Math.max(user.attributes.empathy || 1, baseAttributes.empathy);
-    }
-
-    if (rewards && user.discoveryVersion !== 2) {
-      if (typeof rewards.xp === 'number') user.xp += rewards.xp;
-      if (typeof rewards.credits === 'number') user.credits += rewards.credits;
-    }
-
-    user.discoveryVersion = 2;
-    await user.save();
-    
-    const updatedUser = await User.findById(req.user.id).select('-password');
     res.json(updatedUser);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error updating quiz', error });
+  } catch {
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to complete character discovery' } });
   }
 });
 
