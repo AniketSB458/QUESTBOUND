@@ -12,7 +12,7 @@ Passwords must be 8-72 characters. Tokens expire after seven days. The client mu
 
 ## Quests
 
-- `GET /quests?completed=true|false&limit=50`
+- `GET /quests?completed=true|false&page=1&limit=50`
 - `POST /quests` - `{ title, description?, category, difficulty, dueDate? }`
 - `PATCH /quests/:id` - any editable quest fields
 - `POST /quests/:id/complete` - no body
@@ -27,7 +27,7 @@ Completion is atomic and safe against duplicate rewards. A successful response i
 ## Dashboard and history
 
 - `GET /dashboard` - player, XP progress, active quests, recent activity, and counts
-- `GET /history?limit=50` - newest activity first; maximum 100
+- `GET /history?page=1&limit=50` - newest activity first; maximum 100 per page
 
 ## Shop
 

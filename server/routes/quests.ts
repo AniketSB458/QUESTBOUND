@@ -33,9 +33,10 @@ router.get('/', protect, async (req: AuthRequest, res) => {
   try {
     const completed = req.query.completed === undefined ? undefined : req.query.completed === 'true';
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+    const page = Math.min(Math.max(Number(req.query.page) || 1, 1), 1000);
     const filter: Record<string, unknown> = { userId: req.user!.id };
     if (completed !== undefined) filter.completed = completed;
-    res.json(await Quest.find(filter).sort({ createdAt: -1 }).limit(limit).lean());
+    res.json(await Quest.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean());
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to load quests' } });
   }

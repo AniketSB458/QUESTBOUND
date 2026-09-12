@@ -162,14 +162,12 @@ router.post('/quiz', protect, async (req: AuthRequest, res) => {
 // @route   GET /api/auth/me
 router.get('/me', protect, async (req: AuthRequest, res) => {
   try {
-    if (!req.user) {
-       return res.status(401).json({ message: 'Not authorized' });
-    }
+    if (!req.user) return res.status(401).json({ error: { code: 'AUTH_REQUIRED', message: 'Authentication is required' } });
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
     res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: 'Server error fetching user', error });
+  } catch {
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to load profile' } });
   }
 });
 
