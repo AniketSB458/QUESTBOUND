@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { AppLayout } from './layouts/AppLayout';
+import { Toaster } from 'react-hot-toast';
 
 // Pages
 import Login from './pages/Login';
@@ -15,6 +16,18 @@ import History from './pages/History';
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            background: '#171717',
+            color: '#fff',
+            border: '1px solid #262626',
+            fontFamily: 'monospace',
+            letterSpacing: '0.05em'
+          },
+        }} 
+      />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />

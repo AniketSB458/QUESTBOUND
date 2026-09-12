@@ -1,5 +1,5 @@
 {
-  "name": "NEXUS — Life RPG",
+  "name": "QUESTBOUND",
   "description": "Level Up Your Real Life. Convert real-world tasks into RPG-style quests.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

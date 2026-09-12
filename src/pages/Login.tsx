@@ -30,20 +30,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4 relative overflow-hidden text-neutral-200">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(34,211,238,0.1),transparent_50%)] pointer-events-none" />
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden text-slate-200">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.1),transparent_50%)] pointer-events-none" />
       
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-neutral-900/50 backdrop-blur-xl border border-cyan-500/20 rounded-2xl p-8 shadow-[0_0_40px_rgba(34,211,238,0.1)] relative z-10"
+        className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-8 shadow-[0_0_40px_rgba(251,191,36,0.1)] relative z-10"
       >
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-cyan-950 border border-cyan-400/50 rounded-xl flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-             <Zap className="text-cyan-400" size={24} />
+          <div className="w-12 h-12 bg-amber-950 border border-amber-400/50 rounded-xl flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
+             <Zap className="text-amber-400" size={24} />
           </div>
-          <h1 className="text-2xl font-bold tracking-widest text-white font-mono">NEXUS</h1>
-          <p className="text-cyan-500/70 text-sm tracking-widest mt-1">SYSTEM LOGIN</p>
+          <h1 className="text-2xl font-bold tracking-widest text-white font-mono">QUESTBOUND</h1>
+          <p className="text-amber-500/70 text-sm tracking-widest mt-1">SYSTEM LOGIN</p>
         </div>
 
         {error && (
@@ -54,24 +54,24 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-mono text-neutral-400 mb-1 ml-1 tracking-wider">IDENTIFIER (EMAIL)</label>
+            <label className="block text-xs font-mono text-slate-400 mb-1 ml-1 tracking-wider">IDENTIFIER (EMAIL)</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-neutral-950/50 border border-neutral-800 focus:border-cyan-500/50 rounded-lg px-4 py-3 text-white outline-none transition-all focus:shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+              className="w-full bg-slate-950/50 border border-slate-800 focus:border-amber-500/50 rounded-lg px-4 py-3 text-white outline-none transition-all focus:shadow-[0_0_10px_rgba(251,191,36,0.1)]"
               placeholder="player@nexus.net"
             />
           </div>
           <div>
-            <label className="block text-xs font-mono text-neutral-400 mb-1 ml-1 tracking-wider">ACCESS CODE (PASSWORD)</label>
+            <label className="block text-xs font-mono text-slate-400 mb-1 ml-1 tracking-wider">ACCESS CODE (PASSWORD)</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-neutral-950/50 border border-neutral-800 focus:border-cyan-500/50 rounded-lg px-4 py-3 text-white outline-none transition-all focus:shadow-[0_0_10px_rgba(34,211,238,0.1)]"
+              className="w-full bg-slate-950/50 border border-slate-800 focus:border-amber-500/50 rounded-lg px-4 py-3 text-white outline-none transition-all focus:shadow-[0_0_10px_rgba(251,191,36,0.1)]"
               placeholder="••••••••"
             />
           </div>
@@ -79,15 +79,15 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 font-bold tracking-widest py-3 rounded-lg mt-4 transition-all hover:shadow-[0_0_20px_rgba(34,211,238,0.3)] flex items-center justify-center font-mono"
+            className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-400 font-bold tracking-widest py-3 rounded-lg mt-4 transition-all hover:shadow-[0_0_20px_rgba(251,191,36,0.3)] flex items-center justify-center font-mono"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : 'INITIALIZE CONNECTION'}
           </button>
         </form>
 
         <div className="relative flex items-center justify-center mt-8 mb-6">
-          <div className="absolute w-full h-px bg-neutral-800"></div>
-          <span className="relative bg-neutral-900/80 px-4 text-xs font-mono text-neutral-500 tracking-widest">OR</span>
+          <div className="absolute w-full h-px bg-slate-800"></div>
+          <span className="relative bg-slate-900/80 px-4 text-xs font-mono text-slate-500 tracking-widest">OR</span>
         </div>
         
         <button
@@ -111,9 +111,9 @@ export default function Login() {
           {loading ? <Loader2 className="animate-spin" size={20} /> : 'QUICK ACCESS: DEMO MODE'}
         </button>
 
-        <p className="text-center text-sm text-neutral-500 mt-6 font-mono">
+        <p className="text-center text-sm text-slate-500 mt-6 font-mono">
           UNREGISTERED ENTITY?{' '}
-          <Link to="/register" className="text-cyan-400 hover:text-cyan-300 hover:underline">
+          <Link to="/register" className="text-amber-400 hover:text-amber-300 hover:underline">
             ESTABLISH LINK
           </Link>
         </p>
