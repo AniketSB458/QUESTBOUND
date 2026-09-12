@@ -15,9 +15,16 @@ interface User {
     intellect: number;
     discipline: number;
     creativity: number;
-    endurance: number;
-    health: number;
+    energy: number;
+    empathy: number;
   };
+  characterClass?: string;
+  identity?: string;
+  element?: string;
+  companion?: string;
+  specialAbility?: string;
+  discoveryVersion?: number;
+  quizCompleted?: boolean;
   inventory: string[];
   badges: string[];
   token: string;

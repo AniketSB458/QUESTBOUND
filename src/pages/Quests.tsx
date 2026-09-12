@@ -52,14 +52,17 @@ export default function Quests() {
     }
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     fetchQuests();
   }, []);
 
   const handleAddQuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title) return;
-
+    if (!title || isSubmitting) return;
+    
+    setIsSubmitting(true);
     try {
       const { data } = await api.post('/quests', {
         title,
@@ -67,7 +70,10 @@ export default function Quests() {
         category,
         difficulty,
       });
-      setQuests([data, ...quests]);
+      setQuests(prev => {
+        if (prev.some(q => q._id === data._id)) return prev;
+        return [data, ...prev];
+      });
       setIsAdding(false);
       setTitle('');
       setDescription('');
@@ -75,6 +81,8 @@ export default function Quests() {
       setDifficulty(DIFFICULTIES[0]);
     } catch (error) {
       console.error('Error adding quest', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

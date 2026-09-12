@@ -4,6 +4,7 @@ import { Sidebar } from '../components/Sidebar';
 import { Topbar } from '../components/Topbar';
 import { motion, AnimatePresence } from 'motion/react';
 import BackgroundAtmosphere from '../components/BackgroundAtmosphere';
+import CharacterQuiz from '../components/CharacterQuiz';
 
 export const AppLayout = () => {
   const { user, loading } = useAuth();
@@ -44,6 +45,7 @@ export const AppLayout = () => {
           </AnimatePresence>
         </main>
         
+        <CharacterQuiz />
         <BackgroundAtmosphere />
       </div>
     </div>

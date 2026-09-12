@@ -53,11 +53,11 @@ export const mapCategoryToAttribute = (category: string) => {
     Coding: 'intellect',
     Study: 'intellect',
     Fitness: 'strength',
-    Health: 'health',
+    Empathy: 'empathy',
     Reading: 'intellect',
     Creativity: 'creativity',
     Personal: 'discipline',
-    Other: 'endurance'
+    Other: 'energy'
   };
-  return map[category] || 'endurance';
+  return map[category] || 'energy';
 };

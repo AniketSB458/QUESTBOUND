@@ -15,9 +15,11 @@ export const QuestItem = ({ quest, onComplete, onDelete }: any) => {
   const [phase, setPhase] = useState(0); // 0: Idle, 1: Press, 2: Release/Energy, 3: Checkmark, 4: Burst, 5: XP, 6: Credits, 7: Attr, 8: Done
   const [hovered, setHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  const isCompleting = useRef(false);
   
   const handleCompleteSequence = () => {
-    if (phase > 0) return;
+    if (phase > 0 || isCompleting.current) return;
+    isCompleting.current = true;
     
     // Timeline sequence (optimistic visual before callback)
     setPhase(1); // 0-100ms

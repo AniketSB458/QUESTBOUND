@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Star, Loader2 } from 'lucide-react';
@@ -29,6 +29,8 @@ export default function Shop() {
   const { user, updateUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
+  const isPurchasing = useRef(false);
+
   const fetchItems = async () => {
     try {
       const { data } = await api.get('/shop');
@@ -45,8 +47,9 @@ export default function Shop() {
   }, []);
 
   const handlePurchase = async (item: ShopItem) => {
-    if (!user || user.credits < item.price) return;
+    if (!user || user.credits < item.price || isPurchasing.current) return;
     
+    isPurchasing.current = true;
     setPurchasingId(item._id);
     setError(null);
     try {
@@ -62,6 +65,7 @@ export default function Shop() {
       setError(err.response?.data?.message || 'Purchase failed');
     } finally {
       setPurchasingId(null);
+      isPurchasing.current = false;
     }
   };
 

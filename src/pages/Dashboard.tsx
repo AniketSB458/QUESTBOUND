@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import MagicOrb from '../components/MagicOrb';
 import api from '../services/api';
+import { getCharacterDetails } from '../utils/character';
 
 const AttributeBar = ({ label, value, icon: Icon, colorClass }: { label: string, value: number, icon: any, colorClass: string }) => {
   const maxValue = 100; // soft cap for display purposes
@@ -52,8 +53,10 @@ export default function Dashboard() {
 
   const { currentLevelProgress, xpNeededForNext, percentage } = getXPProgress(user.xp, user.level);
   
+  const characterDetails = getCharacterDetails(user.characterClass || 'Unassigned', user.level);
+  
   const attributes = user.attributes || {
-    strength: 1, intellect: 1, discipline: 1, creativity: 1, endurance: 1, health: 1
+    strength: 1, intellect: 1, discipline: 1, creativity: 1, energy: 1, empathy: 1
   };
 
   return (
@@ -67,15 +70,19 @@ export default function Dashboard() {
            </div>
            
            <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
-             <div className="w-32 h-32 md:w-40 md:h-40 bg-slate-950/40 border border-amber-500/30 rounded-2xl shadow-[0_0_20px_rgba(251,191,36,0.15)] relative z-20 shrink-0">
-               <MagicOrb />
+             <div className="w-32 h-32 md:w-40 md:h-40 bg-slate-950/40 border border-amber-500/30 rounded-2xl shadow-[0_0_20px_rgba(251,191,36,0.15)] relative z-20 shrink-0 overflow-hidden flex items-center justify-center">
+               {user.characterClass && user.characterClass !== 'Unassigned' ? (
+                 <img src={characterDetails.avatarUrl} alt={characterDetails.title} className="w-full h-full object-cover opacity-90 scale-125" />
+               ) : (
+                 <MagicOrb />
+               )}
              </div>
              
              <div className="flex-1">
                <div className="flex items-center gap-3 mb-1">
                  <h2 className="text-2xl md:text-3xl font-bold tracking-widest text-white">{user.name.toUpperCase()}</h2>
                </div>
-               <div className="text-amber-400 font-mono tracking-widest mb-6">FIFTH-YEAR STUDENT</div>
+               <div className="text-amber-400 font-mono tracking-widest mb-6 uppercase">{characterDetails.title}</div>
                
                <div className="space-y-2">
                  <div className="flex justify-between text-xs font-mono font-bold">

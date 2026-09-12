@@ -49,8 +49,8 @@ export const seedDemo = async () => {
         intellect: 91,
         discipline: 85,
         creativity: 63,
-        endurance: 44,
-        health: 80
+        energy: 44,
+        empathy: 80
       },
       inventory: crown ? [crown._id] : [],
       badges: badge ? [badge._id] : [],

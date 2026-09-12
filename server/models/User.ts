@@ -5,8 +5,8 @@ const attributeSchema = new mongoose.Schema({
   intellect: { type: Number, default: 1 },
   discipline: { type: Number, default: 1 },
   creativity: { type: Number, default: 1 },
-  endurance: { type: Number, default: 1 },
-  health: { type: Number, default: 1 },
+  energy: { type: Number, default: 1 },
+  empathy: { type: Number, default: 1 },
 });
 
 const userSchema = new mongoose.Schema(
@@ -21,6 +21,13 @@ const userSchema = new mongoose.Schema(
     longestStreak: { type: Number, default: 0 },
     lastActiveDate: { type: Date },
     attributes: { type: attributeSchema, default: () => ({}) },
+    characterClass: { type: String, default: 'Unassigned' },
+    identity: { type: String },
+    element: { type: String },
+    companion: { type: String },
+    specialAbility: { type: String },
+    discoveryVersion: { type: Number, default: 1 },
+    quizCompleted: { type: Boolean, default: false },
     inventory: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ShopItem' }],
     equippedAvatar: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopItem' },
     equippedTheme: { type: mongoose.Schema.Types.ObjectId, ref: 'ShopItem' },
