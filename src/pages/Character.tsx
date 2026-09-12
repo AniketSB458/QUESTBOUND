@@ -3,8 +3,9 @@ import { User as UserIcon, Shield, Brain, Dumbbell, Lightbulb, Heart, Target, Ac
 import { getXPProgress } from '../utils/rpgLogic';
 import { motion, AnimatePresence } from 'motion/react';
 import MagicOrb from '../components/MagicOrb';
+import ThreeDCharacterDisplay from '../components/discovery/3DCharacterDisplay';
 import { getCharacterDetails } from '../utils/character';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const StatBox = ({ label, value, icon: Icon, colorClass }: any) => (
   <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex items-center gap-4">
@@ -21,6 +22,24 @@ const StatBox = ({ label, value, icon: Icon, colorClass }: any) => (
 export default function Character() {
   const { user, updateUser } = useAuth();
   const [showRediscover, setShowRediscover] = useState(false);
+  const [animEvent, setAnimEvent] = useState<'idle' | 'level_up' | 'quest_complete'>('idle');
+  const [prevLevel, setPrevLevel] = useState(user?.level || 1);
+  const [prevXp, setPrevXp] = useState(user?.xp || 0);
+
+  useEffect(() => {
+    if (user) {
+      if (user.level > prevLevel) {
+        setAnimEvent('level_up');
+        setTimeout(() => setAnimEvent('idle'), 3000);
+        setPrevLevel(user.level);
+        setPrevXp(user.xp);
+      } else if (user.xp > prevXp) {
+        setAnimEvent('quest_complete');
+        setTimeout(() => setAnimEvent('idle'), 1500);
+        setPrevXp(user.xp);
+      }
+    }
+  }, [user]);
   
   if (!user) return null;
 
@@ -100,70 +119,51 @@ export default function Character() {
         )}
       </AnimatePresence>
 
-      <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 md:p-8">
-        <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
-           <div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl bg-slate-950/40 border border-amber-500/30 shadow-[0_0_30px_rgba(251,191,36,0.15)] shrink-0 relative z-20 overflow-hidden flex items-center justify-center">
-             {user.characterClass && user.characterClass !== 'Unassigned' ? (
-               <img src={characterDetails.avatarUrl} alt={characterDetails.title} className="w-full h-full object-cover opacity-90 scale-125" />
-             ) : (
-               <MagicOrb />
-             )}
-           </div>
-           
-           <div className="flex-1 w-full text-center md:text-left">
-             <div className="flex flex-col md:flex-row md:items-baseline gap-2 mb-2 justify-center md:justify-start">
-               <h2 className="text-3xl font-bold text-white tracking-widest">{user.name.toUpperCase()}</h2>
-             </div>
-             
-             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-6">
-               {user.identity && (
-                 <span className="text-amber-400 font-bold font-mono tracking-widest uppercase">{user.identity}</span>
-               )}
-               {user.identity && <span className="text-slate-600 hidden md:inline">•</span>}
-               <span className="text-slate-300 font-mono tracking-widest uppercase">{characterDetails.title}</span>
-               {user.element && (
-                 <>
-                   <span className="text-slate-600 hidden md:inline">•</span>
-                   <span className="px-2 py-0.5 bg-amber-900/20 border border-amber-500/30 text-amber-500/80 rounded text-[10px] font-mono tracking-widest">{user.element}</span>
-                 </>
-               )}
-             </div>
-
-             {user.companion && (
-               <div className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 border border-emerald-500/30 bg-emerald-900/10 rounded-lg text-emerald-400 font-mono text-xs tracking-widest">
-                 COMPANION: {user.companion}
-               </div>
-             )}
-             
-             <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 w-full">
-               <div className="flex justify-between items-end mb-2">
-                 <div className="text-xs font-mono text-slate-400 tracking-widest">PROGRESSION TO LVL {user.level + 1}</div>
-                 <div className="text-sm font-bold font-mono text-amber-400">{percentage.toFixed(1)}%</div>
-               </div>
-               
-               <div className="h-2 bg-slate-900 rounded-full overflow-hidden mb-3 relative">
-                 <motion.div 
-                   className="h-full bg-amber-400 relative overflow-hidden"
-                   initial={{ width: 0 }}
-                   animate={{ width: `${percentage}%` }}
-                   transition={{ type: "spring", bounce: 0.25, duration: 1.5 }}
-                 >
-                   <motion.div 
-                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent"
-                     initial={{ x: '-100%' }}
-                     animate={{ x: '100%' }}
-                     transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                   />
-                 </motion.div>
-               </div>
-               
-               <div className="flex justify-between text-xs font-mono text-slate-500">
-                 <span>{user.xp} TOTAL XP</span>
-                 <span>{currentLevelProgress} / {xpNeededForNext} XP TO NEXT LEVEL</span>
-               </div>
-             </div>
-           </div>
+            {/* Character Visualization - Cinematic Vertical Layout */}
+      <div className="flex flex-col items-center mb-12">
+        <div className="w-full max-w-lg aspect-[3/4] md:aspect-[4/5] bg-slate-950/40 border border-slate-800/50 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.5)] relative z-20 overflow-hidden flex items-center justify-center mb-8">
+          {user.characterClass && user.characterClass !== 'Unassigned' ? (
+            <div className="absolute inset-0 z-10">
+              <ThreeDCharacterDisplay characterClass={user.characterClass || 'Swordsman'} element={user.element || 'ARCANE'} level={user.level || 1} companion={user.companion} interactive={true} animationEvent={animEvent} />
+            </div>
+          ) : (
+            <MagicOrb />
+          )}
         </div>
+        
+        <div className="text-center w-full max-w-md space-y-4">
+          <div>
+            <h2 className="text-3xl md:text-5xl font-bold tracking-[0.2em] text-white uppercase drop-shadow-md mb-3">{characterDetails.title}</h2>
+            <div className="flex items-center justify-center gap-3 text-slate-400 font-mono text-base tracking-widest uppercase">
+              <span>{user.characterClass}</span>
+              <span className="text-amber-500/50">•</span>
+              <span className="text-amber-400">{user.element}</span>
+            </div>
+          </div>
+
+          <div className="pt-4 w-full">
+            <div className="flex justify-between text-xs font-mono font-bold tracking-widest mb-2">
+              <span className="text-amber-400">LEVEL {user.level}</span>
+              <span className="text-slate-500">{currentLevelProgress} / {xpNeededForNext} XP</span>
+            </div>
+            <div className="h-3 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+              <motion.div 
+                className="h-full bg-amber-400 rounded-full shadow-[0_0_15px_rgba(251,191,36,0.5)] relative overflow-hidden" 
+                initial={{ width: 0 }}
+                animate={{ width: `${percentage}%` }}
+                transition={{ type: "spring", bounce: 0.25, duration: 1.5 }}
+              >
+                <motion.div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                />
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </div>
         
         {user.specialAbility && (
           <div className="mb-10 bg-purple-900/10 border border-purple-500/30 rounded-xl p-6 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
@@ -214,6 +214,5 @@ export default function Character() {
            </div>
         </div>
       </div>
-    </div>
   );
 }

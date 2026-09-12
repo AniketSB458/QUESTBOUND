@@ -57,9 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const updatedUser = { ...parsedUser, ...data };
           setUser(updatedUser);
           localStorage.setItem('nexus_user', JSON.stringify(updatedUser));
-        } catch (error) {
-          console.error("Token verification failed", error);
-          // If token invalid, maybe logout? Or let interceptors handle it
+        } catch (error: any) {
+          // gracefully handle expected session expiration without throwing loud console errors
+          if (error.response?.status !== 401 && error.response?.status !== 404) {
+            console.error("Token verification failed", error);
+          }
+          if (error.response?.status === 401 || error.response?.status === 404) {
+            logout();
+          }
         }
       }
       setLoading(false);
