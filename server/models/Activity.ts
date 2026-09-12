@@ -15,4 +15,10 @@ const activitySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+activitySchema.index({ userId: 1, date: -1 });
+activitySchema.index(
+  { userId: 1, questId: 1, action: 1 },
+  { unique: true, partialFilterExpression: { action: 'QUEST_COMPLETED' } }
+);
+
 export const Activity = mongoose.model('Activity', activitySchema);

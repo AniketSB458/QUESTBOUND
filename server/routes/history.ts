@@ -9,9 +9,11 @@ router.get('/', protect, async (req: AuthRequest, res) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Not authorized' });
     
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
     const history = await Activity.find({ userId: req.user.id })
       .sort({ date: -1 })
-      .limit(50); // Limit to last 50 for performance
+      .limit(limit)
+      .lean();
       
     res.json(history);
   } catch (error) {

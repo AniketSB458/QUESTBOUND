@@ -11,9 +11,10 @@ const attributeSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    name: { type: String, required: true, trim: true, minlength: 2, maxlength: 50 },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    password: { type: String, required: true, select: false },
+    timezone: { type: String, default: 'UTC', maxlength: 64 },
     level: { type: Number, default: 1 },
     xp: { type: Number, default: 0 },
     credits: { type: Number, default: 0 },

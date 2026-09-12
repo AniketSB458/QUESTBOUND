@@ -1,7 +1,8 @@
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
-import mongoose from 'mongoose';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
 import { createServer as createViteServer } from 'vite';
 import { connectDB } from './server/db';
 import 'dotenv/config';
@@ -11,6 +12,7 @@ import authRoutes from './server/routes/auth';
 import questRoutes from './server/routes/quests';
 import shopRoutes from './server/routes/shop';
 import historyRoutes from './server/routes/history';
+import dashboardRoutes from './server/routes/dashboard';
 import { seedData } from './seed';
 import { seedDemo } from './server/utils/seedDemo';
 
@@ -19,43 +21,34 @@ async function startServer() {
   const PORT = Number(process.env.PORT) || 3000;
 
   // Middleware
-  app.use(cors());
-  app.use(express.json());
+  const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000').split(',').map((origin) => origin.trim());
+  app.disable('x-powered-by');
+  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(cors({ origin: (origin, callback) => !origin || allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('Origin not allowed')), credentials: true }));
+  app.use(express.json({ limit: '32kb' }));
+  app.use('/api', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }));
+  app.use('/api/auth', rateLimit({ windowMs: 15 * 60_000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false }));
 
   // Connect to Database
   await connectDB();
   
-  // Seed initial data if connected
-  if (mongoose.connection.readyState === 1) {
-    try {
-      await seedData();
-      await seedDemo();
-    } catch (err) {
-      console.warn('Seed data warning:', err);
-    }
+  // Seed initial data
+  if (process.env.SEED_DATA === 'true') {
+    await seedData();
+    if (process.env.SEED_DEMO === 'true') await seedDemo();
   }
 
   // API Routes
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'NEXUS System Online' });
+    res.json({ status: 'ok', service: 'questbound-api', timestamp: new Date().toISOString() });
   });
 
   app.use('/api/auth', authRoutes);
   app.use('/api/quests', questRoutes);
   app.use('/api/shop', shopRoutes);
   app.use('/api/history', historyRoutes);
-
-  // Database error fallback middleware
-  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    if (err.name === 'MongooseError' || err.name === 'MongoNetworkError' || (err.message && err.message.includes('buffering timed out'))) {
-      console.warn('[AI Studio] Database offline — returning mock empty response');
-      if (req.method === 'GET') {
-        return res.json(req.path.endsWith('s') || req.path.endsWith('s/') ? [] : {});
-      }
-      return res.status(503).json({ error: 'Service temporarily unavailable (database offline)' });
-    }
-    next(err);
-  });
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api', (_req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'API endpoint not found' } }));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {

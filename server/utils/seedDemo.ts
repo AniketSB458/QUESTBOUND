@@ -57,7 +57,7 @@ export const seedDemo = async () => {
     });
 
     // Add Active Quests
-    const activeQuests = [
+    const activeQuests: Array<{ title: string; category: 'Coding' | 'Fitness' | 'Reading' | 'Personal'; difficulty: 'Easy' | 'Medium' | 'Hard' | 'Epic' }> = [
       { title: 'Deploy NEXUS to Production', category: 'Coding', difficulty: 'Epic' },
       { title: 'Morning Cyber-Jog (5km)', category: 'Fitness', difficulty: 'Medium' },
       { title: 'Read "Do Androids Dream of Electric Sheep?"', category: 'Reading', difficulty: 'Hard' },
@@ -77,7 +77,7 @@ export const seedDemo = async () => {
     }
 
     // Add Completed Quests & Activity
-    const completedQuests = [
+    const completedQuests: Array<{ title: string; category: 'Coding' | 'Health'; difficulty: 'Medium' | 'Hard' }> = [
       { title: 'Optimize Database Queries', category: 'Coding', difficulty: 'Hard' },
       { title: 'Meal Prep for the week', category: 'Health', difficulty: 'Medium' },
     ] as const;

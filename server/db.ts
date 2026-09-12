@@ -1,15 +1,16 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
-let mongoServer: MongoMemoryServer | null = null;
+let mongoServer: MongoMemoryReplSet | null = null;
 
 export const connectDB = async () => {
   try {
+    mongoose.set('bufferCommands', false);
     let mongoUri = process.env.MONGODB_URI;
 
     if (!mongoUri) {
       console.log('No MONGODB_URI found. Starting in-memory MongoDB for local testing...');
-      mongoServer = await MongoMemoryServer.create();
+      mongoServer = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
       mongoUri = mongoServer.getUri();
     }
 

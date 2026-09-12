@@ -3,28 +3,40 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { protect, AuthRequest } from '../middleware/auth';
+import { z } from 'zod';
 
 const router = express.Router();
 
+const credentialsSchema = z.object({
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  password: z.string().min(8).max(72),
+});
+
+const registerSchema = credentialsSchema.extend({
+  name: z.string().trim().min(2).max(50),
+  timezone: z.string().trim().min(1).max(64).default('UTC'),
+});
+
 const generateToken = (id: string) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'nexus_super_secret_key_dev', {
-    expiresIn: '30d',
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not configured');
+  return jwt.sign({ id }, secret, {
+    expiresIn: '7d',
+    algorithm: 'HS256',
   });
 };
 
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide all fields' });
-    }
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid registration details', fields: parsed.error.flatten().fieldErrors } });
+    const { name, email, password, timezone } = parsed.data;
 
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(409).json({ error: { code: 'EMAIL_IN_USE', message: 'An account with this email already exists' } });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -34,6 +46,7 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      timezone,
     });
 
     if (user) {
@@ -57,16 +70,19 @@ router.post('/register', async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error during registration', error });
+    if ((error as { code?: number }).code === 11000) return res.status(409).json({ error: { code: 'EMAIL_IN_USE', message: 'An account with this email already exists' } });
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to create account' } });
   }
 });
 
 // @route   POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const parsed = credentialsSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'A valid email and password are required' } });
+    const { email, password } = parsed.data;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('+password');
 
     if (user && (await bcrypt.compare(password, user.password))) {
       res.json({
@@ -86,10 +102,10 @@ router.post('/login', async (req, res) => {
         token: generateToken(user.id),
       });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' } });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error during login', error });
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to sign in' } });
   }
 });
 
@@ -149,7 +165,8 @@ router.get('/me', protect, async (req: AuthRequest, res) => {
     if (!req.user) {
        return res.status(401).json({ message: 'Not authorized' });
     }
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found' } });
     res.json(user);
   } catch (error) {
     res.status(500).json({ message: 'Server error fetching user', error });

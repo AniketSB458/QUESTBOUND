@@ -20,4 +20,6 @@ const shopItemSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+shopItemSchema.index({ type: 1, rarity: 1, price: 1 });
+
 export const ShopItem = mongoose.model('ShopItem', shopItemSchema);

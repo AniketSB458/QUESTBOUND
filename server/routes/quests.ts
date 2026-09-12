@@ -1,4 +1,6 @@
 import express from 'express';
+import mongoose from 'mongoose';
+import { z } from 'zod';
 import { protect, AuthRequest } from '../middleware/auth';
 import { Quest } from '../models/Quest';
 import { User } from '../models/User';
@@ -6,188 +8,127 @@ import { Activity } from '../models/Activity';
 import { calculateQuestRewards, mapCategoryToAttribute, getXPRequiredForLevel } from '../utils/rpgLogic';
 
 const router = express.Router();
+const categories = ['Coding', 'Study', 'Fitness', 'Health', 'Reading', 'Creativity', 'Personal', 'Other'] as const;
+const difficulties = ['Easy', 'Medium', 'Hard', 'Epic'] as const;
+const questInput = z.object({
+  title: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(1000).default(''),
+  category: z.enum(categories),
+  difficulty: z.enum(difficulties),
+  dueDate: z.coerce.date().optional(),
+});
+const questUpdate = questInput.partial().refine((value) => Object.keys(value).length > 0, 'At least one field is required');
 
-// @route   GET /api/quests
+const localDayNumber = (date: Date, timezone: string) => {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+    return Math.floor(Date.UTC(get('year'), get('month') - 1, get('day')) / 86_400_000);
+  } catch {
+    return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000);
+  }
+};
+
 router.get('/', protect, async (req: AuthRequest, res) => {
   try {
-    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
-    const quests = await Quest.find({ userId: req.user.id }).sort({ createdAt: -1 });
-    res.json(quests);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    const completed = req.query.completed === undefined ? undefined : req.query.completed === 'true';
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+    const filter: Record<string, unknown> = { userId: req.user!.id };
+    if (completed !== undefined) filter.completed = completed;
+    res.json(await Quest.find(filter).sort({ createdAt: -1 }).limit(limit).lean());
+  } catch {
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to load quests' } });
   }
 });
 
-// @route   POST /api/quests
 router.post('/', protect, async (req: AuthRequest, res) => {
   try {
-    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
-    
-    const { title, description, category, difficulty } = req.body;
-    
-    if (!title || !category || !difficulty) {
-      return res.status(400).json({ message: 'Title, category, and difficulty are required' });
-    }
-
-    const rewards = calculateQuestRewards(difficulty);
-
-    const quest = await Quest.create({
-      userId: req.user.id,
-      title,
-      description,
-      category,
-      difficulty,
-      xpReward: rewards.xp,
-      creditReward: rewards.credits,
-      attributeReward: rewards.attribute,
-    });
-
+    const parsed = questInput.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid quest', fields: parsed.error.flatten().fieldErrors } });
+    const rewards = calculateQuestRewards(parsed.data.difficulty);
+    const quest = await Quest.create({ userId: req.user!.id, ...parsed.data, xpReward: rewards.xp, creditReward: rewards.credits, attributeReward: rewards.attribute });
     res.status(201).json(quest);
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+  } catch {
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to create quest' } });
   }
 });
 
-// @route   POST /api/quests/:id/complete
-router.post('/:id/complete', protect, async (req: AuthRequest, res) => {
+router.patch('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
-
-    const quest = await Quest.findById(req.params.id);
-
-    if (!quest) {
-      return res.status(404).json({ message: 'Quest not found' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: { code: 'QUEST_NOT_FOUND', message: 'Quest not found' } });
+    const parsed = questUpdate.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid quest update', fields: parsed.error.flatten().fieldErrors } });
+    const update: Record<string, unknown> = { ...parsed.data };
+    if (parsed.data.difficulty) {
+      const rewards = calculateQuestRewards(parsed.data.difficulty);
+      Object.assign(update, { xpReward: rewards.xp, creditReward: rewards.credits, attributeReward: rewards.attribute });
     }
-
-    // Check ownership
-    if (quest.userId.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized to complete this quest' });
-    }
-
-    if (quest.completed) {
-      return res.status(400).json({ message: 'Quest already completed' });
-    }
-
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    // 1. Update Quest
-    quest.completed = true;
-    quest.completedAt = new Date();
-    await quest.save();
-
-    // 2. Calculate rewards (Server-side trust)
-    const rewards = calculateQuestRewards(quest.difficulty);
-    const targetAttribute = mapCategoryToAttribute(quest.category);
-
-    // 3. Update User Stats
-    const prevLevel = user.level;
-    user.xp += rewards.xp;
-    user.credits += rewards.credits;
-    
-    // Type assertion to access dynamic attributes safely
-    const attributes = user.attributes as any;
-    if (attributes && typeof attributes[targetAttribute] === 'number') {
-      attributes[targetAttribute] += rewards.attribute;
-    }
-
-    // Streak logic
-    const now = new Date();
-    const lastActive = user.lastActiveDate;
-    
-    if (lastActive) {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const last = new Date(lastActive.getFullYear(), lastActive.getMonth(), lastActive.getDate());
-      
-      const diffTime = Math.abs(today.getTime() - last.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      
-      if (diffDays === 1) {
-        user.streak += 1;
-      } else if (diffDays > 1) {
-        user.streak = 1;
-      }
-      // if diffDays === 0, already active today, streak stays same
-    } else {
-       user.streak = 1;
-    }
-
-    if (user.streak > user.longestStreak) {
-      user.longestStreak = user.streak;
-    }
-    
-    user.lastActiveDate = now;
-
-    // Check Level Up
-    let levelUp = false;
-    let newLevel = prevLevel;
-    while (user.xp >= getXPRequiredForLevel(user.level)) {
-       user.level += 1;
-       levelUp = true;
-       newLevel = user.level;
-    }
-
-    await user.save();
-
-    // 4. Record Activity
-    await Activity.create({
-      userId: user._id,
-      questId: quest._id,
-      action: 'QUEST_COMPLETED',
-      xpEarned: rewards.xp,
-      creditsEarned: rewards.credits,
-      attribute: targetAttribute,
-      attributeIncrease: rewards.attribute,
-      details: {
-        questTitle: quest.title,
-        levelUp,
-        newLevel
-      }
-    });
-
-    res.json({
-      message: 'Quest completed',
-      quest,
-      rewards: {
-        xp: rewards.xp,
-        credits: rewards.credits,
-        attribute: targetAttribute,
-        attributeIncrease: rewards.attribute
-      },
-      playerState: {
-        level: user.level,
-        xp: user.xp,
-        credits: user.credits,
-        streak: user.streak,
-        attributes: user.attributes
-      },
-      levelUpEvent: levelUp ? { previousLevel: prevLevel, newLevel: newLevel } : null
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error', error });
+    const quest = await Quest.findOneAndUpdate({ _id: req.params.id, userId: req.user!.id, completed: false }, { $set: update }, { new: true, runValidators: true });
+    if (!quest) return res.status(404).json({ error: { code: 'QUEST_NOT_FOUND', message: 'Active quest not found' } });
+    res.json(quest);
+  } catch {
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to update quest' } });
   }
 });
 
-// @route   DELETE /api/quests/:id
+router.post('/:id/complete', protect, async (req: AuthRequest, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: { code: 'QUEST_NOT_FOUND', message: 'Quest not found' } });
+  const session = await mongoose.startSession();
+  let result: Record<string, unknown> | undefined;
+  try {
+    await session.withTransaction(async () => {
+      const completedAt = new Date();
+      const quest = await Quest.findOneAndUpdate(
+        { _id: req.params.id, userId: req.user!.id, completed: false },
+        { $set: { completed: true, completedAt } },
+        { new: true, session },
+      );
+      if (!quest) throw Object.assign(new Error('Quest not found or already completed'), { status: 409, code: 'QUEST_ALREADY_COMPLETED' });
+      const user = await User.findById(req.user!.id).session(session);
+      if (!user) throw Object.assign(new Error('User not found'), { status: 404, code: 'USER_NOT_FOUND' });
+
+      const rewards = calculateQuestRewards(quest.difficulty);
+      const targetAttribute = mapCategoryToAttribute(quest.category);
+      const previousLevel = user.level;
+      user.xp += rewards.xp;
+      user.credits += rewards.credits;
+      const attributes = user.attributes as unknown as Record<string, number>;
+      attributes[targetAttribute] = (attributes[targetAttribute] ?? 1) + rewards.attribute;
+
+      const today = localDayNumber(completedAt, user.timezone || 'UTC');
+      const lastDay = user.lastActiveDate ? localDayNumber(user.lastActiveDate, user.timezone || 'UTC') : undefined;
+      if (lastDay === undefined || today - lastDay > 1) user.streak = 1;
+      else if (today - lastDay === 1) user.streak += 1;
+      user.longestStreak = Math.max(user.longestStreak, user.streak);
+      user.lastActiveDate = completedAt;
+      while (user.xp >= getXPRequiredForLevel(user.level)) user.level += 1;
+      await user.save({ session });
+
+      await Activity.create([{ userId: user._id, questId: quest._id, action: 'QUEST_COMPLETED', xpEarned: rewards.xp, creditsEarned: rewards.credits, attribute: targetAttribute, attributeIncrease: rewards.attribute, date: completedAt, details: { questTitle: quest.title, levelUp: user.level > previousLevel, newLevel: user.level } }], { session });
+      result = {
+        message: 'Quest completed', quest,
+        rewards: { xp: rewards.xp, credits: rewards.credits, attribute: targetAttribute, attributeIncrease: rewards.attribute },
+        playerState: { level: user.level, xp: user.xp, credits: user.credits, streak: user.streak, longestStreak: user.longestStreak, attributes: user.attributes },
+        levelUpEvent: user.level > previousLevel ? { previousLevel, newLevel: user.level } : null,
+      };
+    });
+    res.json(result);
+  } catch (error) {
+    const known = error as { status?: number; code?: string };
+    res.status(known.status || 500).json({ error: { code: known.code || 'INTERNAL_ERROR', message: known.status ? (error as Error).message : 'Unable to complete quest' } });
+  } finally {
+    await session.endSession();
+  }
+});
+
 router.delete('/:id', protect, async (req: AuthRequest, res) => {
   try {
-    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
-
-    const quest = await Quest.findById(req.params.id);
-
-    if (!quest) {
-      return res.status(404).json({ message: 'Quest not found' });
-    }
-
-    if (quest.userId.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Not authorized' });
-    }
-
-    await quest.deleteOne();
-    res.json({ message: 'Quest removed' });
-  } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: { code: 'QUEST_NOT_FOUND', message: 'Quest not found' } });
+    const quest = await Quest.findOneAndDelete({ _id: req.params.id, userId: req.user!.id, completed: false });
+    if (!quest) return res.status(404).json({ error: { code: 'QUEST_NOT_FOUND', message: 'Active quest not found' } });
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unable to delete quest' } });
   }
 });
 
