@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import MagicOrb from '../components/MagicOrb';
-import ThreeDCharacterDisplay from '../components/discovery/3DCharacterDisplay';
+import ThreeDCharacterDisplay from '../components/character/ThreeDCharacterDisplay';
 import api from '../services/api';
 import { getCharacterDetails } from '../utils/character';
 

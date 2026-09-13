@@ -1,7 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { LogOut, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getCharacterImage } from './discovery/3DCharacterDisplay';
 
 export const Topbar = () => {
   const { user, logout } = useAuth();
@@ -37,14 +36,8 @@ export const Topbar = () => {
         </div>
         
         <div className="flex items-center gap-3 pl-4 border-l border-slate-800">
-          <div className="w-10 h-10 rounded-full border border-amber-500/50 overflow-hidden shadow-[0_0_10px_rgba(251,191,36,0.3)] shrink-0">
-            {user?.characterClass && user?.characterClass !== 'Unassigned' ? (
-              <img src={getCharacterImage(user.characterClass)} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-amber-950 flex items-center justify-center text-amber-400 font-bold">
-                {user?.name?.charAt(0).toUpperCase()}
-              </div>
-            )}
+          <div className="w-8 h-8 rounded-full bg-amber-950 border border-amber-500/50 flex items-center justify-center text-amber-400 font-bold">
+            {user?.name?.charAt(0).toUpperCase()}
           </div>
           <button 
             onClick={handleLogout}
