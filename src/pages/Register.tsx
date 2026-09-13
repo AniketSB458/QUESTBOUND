@@ -24,7 +24,8 @@ export default function Register() {
       login(data);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const msg = err.response?.data?.message || 'Registration failed';
+      setError(msg === 'User already exists' ? 'This email is already registered. Please login instead.' : msg);
     } finally {
       setLoading(false);
     }
