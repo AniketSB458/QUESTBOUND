@@ -21,7 +21,7 @@ async function startServer() {
     throw new Error('JWT_SECRET must contain at least 32 characters in production');
   }
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = 3000;
 
   // Middleware
   const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000').split(',').map((origin) => origin.trim());
