@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import api from '../services/api';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, CheckCircle, Clock, Award, TrendingUp, X, Loader2 } from 'lucide-react';
@@ -58,7 +58,7 @@ export default function Quests() {
     fetchQuests();
   }, []);
 
-  const handleAddQuest = async (e: React.FormEvent) => {
+  const handleAddQuest = async (e: FormEvent) => {
     e.preventDefault();
     if (!title || isSubmitting) return;
     

@@ -9,20 +9,23 @@ export interface AuthRequest extends Request {
 }
 
 export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
-  let token;
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return res.status(503).json({ error: { code: 'SERVER_MISCONFIGURED', message: 'Authentication is unavailable' } });
+  }
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     try {
-      token = req.headers.authorization.split(' ')[1];
+      const token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'nexus_super_secret_key_dev') as { id: string };
+      const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] }) as { id: string };
 
       req.user = { id: decoded.id };
       next();
     } catch (error) {
-      res.status(401).json({ message: 'Not authorized, token failed' });
+      return res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Authentication token is invalid or expired' } });
     }
   } else {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    return res.status(401).json({ error: { code: 'AUTH_REQUIRED', message: 'Authentication is required' } });
   }
 };

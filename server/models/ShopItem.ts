@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const shopItemSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: true, unique: true, trim: true },
     description: { type: String, required: true },
     price: { type: Number, required: true },
     type: {
@@ -19,5 +19,7 @@ const shopItemSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+shopItemSchema.index({ type: 1, rarity: 1, price: 1 });
 
 export const ShopItem = mongoose.model('ShopItem', shopItemSchema);

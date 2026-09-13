@@ -94,6 +94,7 @@ export default function Discovery() {
     try {
       const rewards = { xp: 250, credits: 100 };
       const { data } = await api.post('/auth/quiz', {
+        traits: profile.traits,
         characterClass: profile.characterClass,
         identity: profile.identity,
         element: profile.element,

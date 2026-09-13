@@ -3,13 +3,14 @@ import { protect, AuthRequest } from '../middleware/auth';
 import { ShopItem } from '../models/ShopItem';
 import { User } from '../models/User';
 import { Activity } from '../models/Activity';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
 // @route   GET /api/shop
 router.get('/', protect, async (req, res) => {
   try {
-    const items = await ShopItem.find({});
+    const items = await ShopItem.find({}).sort({ price: 1 }).lean();
     res.json(items);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
@@ -18,53 +19,37 @@ router.get('/', protect, async (req, res) => {
 
 // @route   POST /api/shop/:id/purchase
 router.post('/:id/purchase', protect, async (req: AuthRequest, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: { code: 'ITEM_NOT_FOUND', message: 'Item not found' } });
+  const session = await mongoose.startSession();
   try {
-    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
-    
-    const user = await User.findById(req.user.id);
-    const item = await ShopItem.findById(req.params.id);
-
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    if (!item) return res.status(404).json({ message: 'Item not found' });
-
-    // Check if already owns
-    if (user.inventory.includes(item._id) || user.badges.includes(item._id)) {
-      return res.status(400).json({ message: 'You already own this item' });
-    }
-
-    if (user.credits < item.price) {
-      return res.status(400).json({ message: 'Insufficient credits' });
-    }
-
-    // Purchase
-    user.credits -= item.price;
-    
-    if (item.type === 'badge') {
-      user.badges.push(item._id);
-    } else {
-      user.inventory.push(item._id);
-    }
-
-    await user.save();
-
-    await Activity.create({
-      userId: user._id,
-      action: 'ITEM_PURCHASED',
-      details: {
-        itemId: item._id,
-        itemName: item.name,
-        price: item.price
+    let result: Record<string, unknown> | undefined;
+    await session.withTransaction(async () => {
+      const item = await ShopItem.findById(req.params.id).session(session);
+      if (!item) throw Object.assign(new Error('Item not found'), { status: 404, code: 'ITEM_NOT_FOUND' });
+      const ownershipFilter = item.type === 'badge'
+        ? { badges: { $ne: item._id } }
+        : { inventory: { $ne: item._id } };
+      const destination = item.type === 'badge' ? 'badges' : 'inventory';
+      const user = await User.findOneAndUpdate(
+        { _id: req.user!.id, credits: { $gte: item.price }, ...ownershipFilter },
+        { $inc: { credits: -item.price }, $addToSet: { [destination]: item._id } },
+        { new: true, session },
+      );
+      if (!user) {
+        const current = await User.findById(req.user!.id).session(session);
+        if (!current) throw Object.assign(new Error('User not found'), { status: 404, code: 'USER_NOT_FOUND' });
+        const owned = current.inventory.some((id) => id.equals(item._id)) || current.badges.some((id) => id.equals(item._id));
+        throw Object.assign(new Error(owned ? 'You already own this item' : 'Insufficient credits'), { status: 409, code: owned ? 'ITEM_ALREADY_OWNED' : 'INSUFFICIENT_CREDITS' });
       }
+      await Activity.create([{ userId: user._id, action: 'ITEM_PURCHASED', details: { itemId: item._id, itemName: item.name, price: item.price } }], { session });
+      result = { message: 'Item purchased successfully', credits: user.credits, inventory: user.inventory, badges: user.badges };
     });
-
-    res.json({
-      message: 'Item purchased successfully',
-      credits: user.credits,
-      inventory: user.inventory,
-      badges: user.badges
-    });
+    res.json(result);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    const known = error as { status?: number; code?: string };
+    res.status(known.status || 500).json({ error: { code: known.code || 'INTERNAL_ERROR', message: known.status ? (error as Error).message : 'Unable to purchase item' } });
+  } finally {
+    await session.endSession();
   }
 });
 

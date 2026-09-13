@@ -8,16 +8,14 @@ const seedData = async () => {
       await connectDB();
     }
 
-    const count = await ShopItem.countDocuments();
-    if (count > 0) {
-      console.log('Shop items already exist. Skipping seed.');
-      return;
-    }
-
-    console.log('Clearing existing shop items...');
-    await ShopItem.deleteMany();
-
-    const items = [
+    const items: Array<{
+      name: string;
+      description: string;
+      price: number;
+      type: 'badge' | 'avatar' | 'theme' | 'title' | 'cosmetic';
+      rarity: 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
+      icon: string;
+    }> = [
       {
         name: 'Neon Crown',
         description: 'A glowing cyberpunk crown for the elite.',
@@ -60,10 +58,17 @@ const seedData = async () => {
       }
     ];
 
-    await ShopItem.insertMany(items);
-    console.log('Shop items seeded successfully.');
+    await ShopItem.bulkWrite(items.map((item) => ({
+      updateOne: {
+        filter: { name: item.name },
+        update: { $set: item },
+        upsert: true,
+      },
+    })));
+    console.log('Shop items seeded idempotently.');
   } catch (error) {
     console.error('Error seeding data:', error);
+    throw error;
   }
 };
 
