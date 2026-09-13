@@ -27,7 +27,7 @@ async function startServer() {
   const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:3000').split(',').map((origin) => origin.trim());
   app.disable('x-powered-by');
   app.use(helmet({ contentSecurityPolicy: false }));
-  app.use(cors({ origin: (origin, callback) => !origin || allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('Origin not allowed')), credentials: true }));
+  app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: '32kb' }));
   app.use('/api', rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }));
   app.use('/api/auth', rateLimit({ windowMs: 15 * 60_000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false }));
