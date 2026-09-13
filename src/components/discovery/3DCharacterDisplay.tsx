@@ -15,6 +15,14 @@ interface Props {
 
 const ARCANE_RUNES = ['✧', '⍙', '⎈', '❖', '⎊', '⍣', '⌖'];
 
+
+export const getCharacterImage = (charClass: string) => {
+  // 3D Cartoon / Stylized figures
+  if (charClass === 'Swordsman') return 'https://images.unsplash.com/photo-1608889175123-8ee362201f81?auto=format&fit=crop&q=80'; // 3D toy knight
+  if (charClass === 'Ranger') return 'https://images.unsplash.com/photo-1581833971358-2c8b550f87b3?auto=format&fit=crop&q=80'; // Stylized colorful character
+  return 'https://images.unsplash.com/photo-1618331835717-801e976710b2?auto=format&fit=crop&q=80'; // 3D cartoon avatar
+};
+
 export default function ThreeDCharacterDisplay({ characterClass, element, level, companion, interactive = true, alignCharacter = 'center', className }: Props) {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -37,12 +45,7 @@ export default function ThreeDCharacterDisplay({ characterClass, element, level,
     rune: ARCANE_RUNES[Math.floor(Math.random() * ARCANE_RUNES.length)]
   }));
 
-  const getCharacterImage = (charClass: string) => {
-    if (charClass === 'Swordsman') return 'https://images.unsplash.com/photo-1535581174620-3b03698b6883?auto=format&fit=crop&q=80';
-    if (charClass === 'Ranger') return 'https://images.unsplash.com/photo-1598153346810-860daa814ce9?auto=format&fit=crop&q=80';
-    return 'https://images.unsplash.com/photo-1514838612111-e633d7dfd1dd?auto=format&fit=crop&q=80'; // Mage
-  };
-
+  
   const renderParticles = () => {
     if (characterClass === 'Mage') {
       return particles.map(p => (
@@ -119,9 +122,9 @@ export default function ThreeDCharacterDisplay({ characterClass, element, level,
         }}
         transition={{ type: "spring", stiffness: 50, damping: 20 }}
       >
-        {characterClass === 'Swordsman' && <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1599839619722-39751411ea63?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-30" />}
-        {characterClass === 'Mage' && <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1530983818320-9430c6fa0995?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-30" />}
-        {characterClass === 'Ranger' && <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1448375240586-882707db8855?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-30" />}
+        {characterClass === 'Swordsman' && <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1614850523459-c2f4c699c52e?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-30" />}
+        {characterClass === 'Mage' && <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550684376-efcbd6e3f031?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-30" />}
+        {characterClass === 'Ranger' && <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542273917363-3b1817f69a5d?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay opacity-30" />}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/50" />
       </motion.div>
 
