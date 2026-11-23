@@ -1,3 +1,7 @@
+## Prototype for IIT Bhubneshvar
+# PLZ MUST BE VISIT:
+# https://questbound-three.vercel.app
+
 # NEXUS — Life RPG
 
 ## Overview
